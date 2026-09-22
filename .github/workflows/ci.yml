@@ -35,7 +35,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps ${{ matrix.project }}
+      # chromium is needed for the `setup` (auth) project; matrix.project is the browser under test.
+      - run: npx playwright install --with-deps chromium ${{ matrix.project }}
       - run: npx playwright test --project=setup --project=${{ matrix.project }}
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
