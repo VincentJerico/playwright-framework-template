@@ -1,14 +1,14 @@
+import { defineConfig } from 'eslint/config';
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
-/** Flat ESLint config with TypeScript support. */
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: ['node_modules/**', 'playwright-report/**', 'test-results/**', 'playwright/.auth/**'],
   },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
+  tseslint.configs.recommended,
   {
     languageOptions: {
       ecmaVersion: 2023,
