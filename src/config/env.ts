@@ -45,8 +45,13 @@ function credential(name: 'SAUCE_USERNAME' | 'SAUCE_PASSWORD', demoValue: string
 
 export const config = {
   baseURL,
-  username: credential('SAUCE_USERNAME', 'standard_user'),
-  password: credential('SAUCE_PASSWORD', 'secret_sauce'),
+  // Getters, so specs that never log in (the API project) don't need credentials.
+  get username() {
+    return credential('SAUCE_USERNAME', 'standard_user');
+  },
+  get password() {
+    return credential('SAUCE_PASSWORD', 'secret_sauce');
+  },
 };
 
 /** Where the reusable authenticated session is stored (see tests/auth.setup.ts). */
