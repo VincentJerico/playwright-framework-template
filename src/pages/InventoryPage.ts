@@ -3,14 +3,14 @@ import { BasePage } from './BasePage.js';
 
 /** SauceDemo inventory / products page. */
 export class InventoryPage extends BasePage {
-  readonly title: Locator;
+  readonly pageTitle: Locator;
   readonly items: Locator;
   readonly cartBadge: Locator;
   readonly sortDropdown: Locator;
 
   constructor(page: Page) {
     super(page);
-    this.title = page.locator('.title');
+    this.pageTitle = page.locator('.title');
     this.items = page.locator('.inventory_item');
     this.cartBadge = page.locator('.shopping_cart_badge');
     this.sortDropdown = page.locator('.product_sort_container');
@@ -22,7 +22,7 @@ export class InventoryPage extends BasePage {
 
   async expectLoaded() {
     await expect(this.page).toHaveURL(/inventory\.html/);
-    await expect(this.title).toHaveText('Products');
+    await expect(this.pageTitle).toHaveText('Products');
   }
 
   addToCart(productId: string) {
