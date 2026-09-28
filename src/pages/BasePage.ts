@@ -8,8 +8,4 @@ export abstract class BasePage {
   async goto(path = '/') {
     await this.page.goto(path);
   }
-
-  async title(): Promise<string> {
-    return this.page.title();
-  }
 }
