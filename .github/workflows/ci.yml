@@ -28,7 +28,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit]
+        include:
+          - { project: chromium, browser: chromium }
+          - { project: firefox, browser: firefox }
+          - { project: webkit, browser: webkit }
+          - { project: mobile-chrome, browser: chromium }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -36,8 +40,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # chromium is needed for the `setup` (auth) project; matrix.project is the browser under test.
-      - run: npx playwright install --with-deps chromium ${{ matrix.project }}
+      # chromium is needed for the `setup` (auth) project; matrix.browser is the engine matrix.project runs on.
+      - run: npx playwright install --with-deps chromium ${{ matrix.browser }}
       - run: npx playwright test --project=setup --project=${{ matrix.project }}
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
