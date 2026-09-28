@@ -24,6 +24,7 @@ jobs:
 
   test:
     name: E2E (${{ matrix.project }})
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
