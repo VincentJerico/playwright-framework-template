@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { config } from '../src/config/env.js';
+import { test, expect } from '../src/fixtures/test.js';
 
 /**
  * API-level example using Playwright's `request` fixture — no browser needed.
@@ -7,8 +6,9 @@ import { config } from '../src/config/env.js';
  */
 test.describe('API', () => {
   test('the site under test responds 200 @smoke', async ({ request }) => {
-    const res = await request.get(config.baseURL);
+    const res = await request.get('/');
     expect(res.status()).toBe(200);
     expect(res.headers()['content-type']).toContain('text/html');
+    expect(await res.text()).toContain('<title>Swag Labs</title>');
   });
 });

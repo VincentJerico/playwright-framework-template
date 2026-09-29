@@ -51,7 +51,7 @@ playwright-framework-template/
     ├── auth.setup.ts           # authenticate once → storage state
     ├── login.spec.ts           # logged-out flows (opts out of stored session)
     ├── inventory.spec.ts       # authenticated flows (reuse session)
-    └── api.spec.ts             # request-fixture API example
+    └── api.spec.ts             # `api` project: HTTP checks, no browser or login
 ```
 
 ## Extending it

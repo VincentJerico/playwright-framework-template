@@ -1,14 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config, STORAGE_STATE } from './src/config/env.js';
 
+const API_SPECS = /api\.spec\.ts$/;
+
 /**
  * Production-grade Playwright config.
  * - `setup` project authenticates once and saves a storage state, reused by the browser projects.
+ * - `api` project runs `*api.spec.ts` over HTTP alone: no browser, no login. Browser projects ignore them.
  * - Cross-browser: chromium, firefox, webkit (+ a mobile project).
  * - Env-driven baseURL (TEST_ENV / BASE_URL). Reporters adapt to CI.
  */
 export default defineConfig({
   testDir: './tests',
+  testIgnore: API_SPECS,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -30,6 +34,7 @@ export default defineConfig({
   projects: [
     // 1) Authenticate once → save session to STORAGE_STATE.
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    { name: 'api', testMatch: API_SPECS, testIgnore: [] },
 
     // 2) Browser projects reuse the saved session (login specs opt out per-file).
     {
