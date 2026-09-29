@@ -37,6 +37,13 @@ npm run test:smoke            # @smoke subset
 npm run report                # open the HTML report
 ```
 
+### Configuration
+
+Copy `.env.example` to `.env` to set `TEST_ENV`, `BASE_URL`, or credentials; shell variables win over
+`.env`. Credentials fall back to SauceDemo's public demo user (`standard_user` / `secret_sauce`) only
+while the target is SauceDemo. Point `BASE_URL` or an environment at your own app and the run stops at
+startup until `SAUCE_USERNAME` and `SAUCE_PASSWORD` are set, in CI as well as locally.
+
 ## Structure
 
 ```
