@@ -30,7 +30,8 @@ function resolveEnv(name: string): EnvName {
 
 const ENV = resolveEnv(process.env.TEST_ENV || 'dev');
 const baseURL = process.env.BASE_URL || ENVIRONMENTS[ENV].baseURL;
-const isDemo = new URL(baseURL).hostname === 'www.saucedemo.com';
+// saucedemo.com redirects to www.saucedemo.com, so both hosts are the demo.
+const isDemo = ['saucedemo.com', 'www.saucedemo.com'].includes(new URL(baseURL).hostname);
 
 // The fallbacks are SauceDemo's public demo credentials, printed on its login page. They are
 // never right for another target, so any other base URL must supply its own.
