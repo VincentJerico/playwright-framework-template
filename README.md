@@ -63,5 +63,7 @@ playwright-framework-template/
 
 ## CI
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint + format, then the suite across
-**chromium/firefox/webkit** in a matrix, uploading the HTML report per browser.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint, format, and typecheck, then the suite
+across **chromium/firefox/webkit/mobile-chrome** in a matrix, uploading the HTML report per project.
+CI retries a failed test twice so the report captures a trace, but `failOnFlakyTests` still fails the
+run when a retry passes, so flakiness gets fixed instead of hidden.
