@@ -5,26 +5,25 @@
 ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 
-A **production-grade, reusable Playwright + TypeScript test framework** — the scaffolding I'd start a
-real UI automation suite from, not just a bag of tests. It demonstrates the patterns that matter for
-an SDET: custom fixtures, the Page Object Model, multi-environment config, one-time auth reuse,
-data factories, cross-browser projects, tagging, linting, and CI.
+A reusable Playwright and TypeScript test framework. It's the structure I'd start a real UI
+automation suite from, with custom fixtures, page objects, per-environment config, login state
+saved once and reused, data factories, cross-browser projects, tags, linting and CI.
 
 > The demo target is [SauceDemo](https://www.saucedemo.com) so it runs out of the box. Point it at your
 > own app by changing `src/config/env.ts` and the page objects.
 
-## Why it's structured this way
+## How it's organized
 
-| Pattern               | Where                                   | Why                                                                     |
-| --------------------- | --------------------------------------- | ----------------------------------------------------------------------- |
-| **Custom fixtures**   | `src/fixtures/test.ts`                  | Inject page objects into tests → specs stay declarative                 |
-| **Page Object Model** | `src/pages/`                            | UI selectors live in one place; tests read like behavior                |
-| **Multi-env config**  | `src/config/env.ts`                     | `TEST_ENV=dev\|staging\|prod` / `BASE_URL` — no hard-coded URLs         |
-| **Auth reuse**        | `tests/auth.setup.ts` + `setup` project | Log in **once**, save storage state, reuse everywhere → faster, stabler |
-| **Data factories**    | `src/data/factory.ts`                   | Faker-generated data → no shared/brittle fixtures                       |
-| **Cross-browser**     | `playwright.config.ts` projects         | chromium · firefox · webkit · mobile-chrome                             |
-| **Tagging**           | `@smoke` in titles                      | `npm run test:smoke` for a fast subset                                  |
-| **Quality gates**     | ESLint · Prettier · CI                  | The framework holds itself to a standard                                |
+| Pattern           | Where                                   | Why                                                             |
+| ----------------- | --------------------------------------- | --------------------------------------------------------------- |
+| Custom fixtures   | `src/fixtures/test.ts`                  | Page objects arrive as fixtures, so specs stay short            |
+| Page Object Model | `src/pages/`                            | UI selectors live in one place; tests read like behavior        |
+| Multi-env config  | `src/config/env.ts`                     | `TEST_ENV=dev\|staging\|prod` or `BASE_URL`, no hard-coded URLs |
+| Auth reuse        | `tests/auth.setup.ts` + `setup` project | Log in once, save the session, reuse it in every spec           |
+| Data factories    | `src/data/factory.ts`                   | Faker data, so tests don't share brittle fixtures               |
+| Cross-browser     | `playwright.config.ts` projects         | Chromium, Firefox, WebKit and mobile Chrome                     |
+| Tagging           | `@smoke` in titles                      | `npm run test:smoke` for a fast subset                          |
+| Quality gates     | ESLint, Prettier, typecheck, CI         | Lint, format and type errors fail the build                     |
 
 ## Getting started
 
@@ -70,7 +69,8 @@ playwright-framework-template/
 
 ## CI
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint, format, and typecheck, then the suite
-across **chromium/firefox/webkit/mobile-chrome** in a matrix, uploading the HTML report per project.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint, format and typecheck first. Then
+the E2E suite runs on Chromium, Firefox, WebKit and mobile Chrome in a matrix, uploading an HTML
+report per browser, and the `api` project runs in its own job without a browser.
 CI retries a failed test twice so the report captures a trace, but `failOnFlakyTests` still fails the
 run when a retry passes, so flakiness gets fixed instead of hidden.
