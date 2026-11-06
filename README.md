@@ -109,6 +109,11 @@ The demo's `problem_user` has deliberate bugs. These tests assert them as they a
 | Sorting by price doesn't reorder the products | `sorting by price changes nothing`             |
 | Typing a last name overwrites the first name  | `typing a last name overwrites the first name` |
 
+Also observed, not pinned: for `problem_user`, the cart's **Checkout** button sometimes ignores a
+click. It happened twice in CI (once in Firefox, once in WebKit) and never for `standard_user`, whose
+checkout tests make the same click. An intermittent bug can't be pinned with an assertion, so the
+last-name test opens the checkout form directly instead.
+
 ## Extending it
 
 1. Add a page object in `src/pages/` (extend `BasePage`, give actions `@step()`).
