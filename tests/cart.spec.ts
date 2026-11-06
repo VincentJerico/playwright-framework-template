@@ -26,7 +26,11 @@ test.describe('Cart', { annotation: { type: 'feature', description: 'Cart' } }, 
   test('the cart survives a reload', async ({ app, cartPage, page }) => {
     await app.seedCart(PRODUCTS.fleeceJacket);
     await cartPage.goto();
-    await page.reload();
+    // Wait for the cart to show the item first: it proves the item was there before the reload,
+    // and reloading mid-navigation aborts the first load (Firefox reports NS_BINDING_ABORTED).
+    await expect(cartPage.names).toHaveText([PRODUCTS.fleeceJacket.name]);
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(cartPage.names).toHaveText([PRODUCTS.fleeceJacket.name]);
   });
 
