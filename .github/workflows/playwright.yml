@@ -62,19 +62,30 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       shards: ${{ steps.plan.outputs.shards }}
+      playwright: ${{ steps.plan.outputs.playwright }}
     steps:
+      - uses: actions/checkout@v7
       - id: plan
+        working-directory: ${{ inputs.working-directory }}
         env:
           SHARDS: ${{ inputs.shards }}
+        # The test jobs run in Playwright's Docker image, which must match the installed version.
         run: |
           if ! [[ "$SHARDS" =~ ^[1-9][0-9]?$ ]]; then echo "shards must be 1-99, got '$SHARDS'"; exit 1; fi
           echo "shards=$(seq -s, 1 "$SHARDS" | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"
+          version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test']?.version ?? ''")
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "@playwright/test not found in package-lock.json"; exit 1; fi
+          echo "playwright=$version" >> "$GITHUB_OUTPUT"
 
   test:
     name: ${{ matrix.project }} (${{ matrix.shard }}/${{ inputs.shards }})
     needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Browsers and their system libraries come preinstalled, so no apt download per job.
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.plan.outputs.playwright }}-noble
+      options: --user 1001
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -96,8 +107,6 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
       - run: npm ci
-      - name: Install browsers
-        run: npx playwright install --with-deps
       - name: Run ${{ matrix.project }}, shard ${{ matrix.shard }}
         env:
           PROJECT: ${{ matrix.project }}
