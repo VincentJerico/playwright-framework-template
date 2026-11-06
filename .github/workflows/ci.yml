@@ -57,6 +57,32 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run selftest
 
+  template:
+    # Proves "Use this template" still works: set up a fresh copy and check it builds.
+    name: Template setup
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Set up a fresh copy
+        run: |
+          copy="$RUNNER_TEMP/new-project"
+          mkdir -p "$copy"
+          git archive HEAD | tar -x -C "$copy"
+          cd "$copy"
+          npm ci
+          npm run setup -- --name template-check --dev https://dev.example.test --prod https://example.test
+          grep -q "dev: { baseURL: 'https://dev.example.test' }" src/config/env.ts
+          grep -q "prod: { baseURL: 'https://example.test' }" src/config/env.ts
+          grep -q '"name": "template-check"' package.json
+          test -f .env
+          npm run typecheck
+          SAUCE_USERNAME=check SAUCE_PASSWORD=check npx playwright test --list > /dev/null
+
   api:
     name: API
     needs: lint
