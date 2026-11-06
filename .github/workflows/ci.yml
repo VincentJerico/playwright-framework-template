@@ -1,11 +1,31 @@
 name: CI
 
+# When each part runs:
+#   every push and PR: static checks, self-test, API, @smoke on Chromium, then the full suite
+#                      on every browser (sharded), merged into one report
+#   main and nightly:  the same, plus the merged report published to GitHub Pages
+#   nightly:           catches changes on the site under test even when this repo hasn't changed
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 19 * * *' # 03:00 Philippine time
   workflow_dispatch:
+    inputs:
+      grep:
+        description: Only run tests matching this pattern (e.g. @smoke). Empty runs everything.
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  # A new push to a PR cancels its older run; main and nightly runs always finish.
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -22,18 +42,11 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
 
-  test:
-    name: E2E (${{ matrix.project }})
+  selftest:
+    # A gate that can't fail isn't a gate: every guard must catch its planted defect.
+    name: Self-test (planted failures)
     needs: lint
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { project: chromium, browser: chromium }
-          - { project: firefox, browser: firefox }
-          - { project: webkit, browser: webkit }
-          - { project: mobile-chrome, browser: chromium }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -41,15 +54,34 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # chromium is needed for the `setup` (auth) project; matrix.browser is the engine matrix.project runs on.
-      - run: npx playwright install --with-deps chromium ${{ matrix.browser }}
-      - run: npx playwright test --project=setup --project=${{ matrix.project }}
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run selftest
+
+  template:
+    # Proves "Use this template" still works: set up a fresh copy and check it builds.
+    name: Template setup
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          name: report-${{ matrix.project }}
-          path: playwright-report/
-          retention-days: 14
+          node-version: 22
+          cache: npm
+      - name: Set up a fresh copy
+        run: |
+          copy="$RUNNER_TEMP/new-project"
+          mkdir -p "$copy"
+          git archive HEAD | tar -x -C "$copy"
+          cd "$copy"
+          npm ci
+          npm run setup -- --name template-check --dev https://dev.example.test --prod https://example.test
+          grep -q "dev: { baseURL: 'https://dev.example.test' }" src/config/env.ts
+          grep -q "prod: { baseURL: 'https://example.test' }" src/config/env.ts
+          grep -q '"name": "template-check"' package.json
+          test -f .env
+          npm run typecheck
+          SAUCE_USERNAME=check SAUCE_PASSWORD=check npx playwright test --list > /dev/null
 
   api:
     name: API
@@ -63,3 +95,65 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright test --project=api
+
+  smoke:
+    name: Smoke
+    needs: lint
+    uses: ./.github/workflows/playwright.yml
+    with:
+      projects: '["chromium"]'
+      shards: 1
+      grep: '@smoke'
+      report-name: smoke-report
+    secrets: inherit
+
+  e2e:
+    name: E2E
+    needs: smoke
+    uses: ./.github/workflows/playwright.yml
+    with:
+      projects: '["chromium", "firefox", "webkit", "mobile-chrome"]'
+      shards: 2
+      grep: ${{ inputs.grep }}
+    secrets: inherit
+
+  e2e-result:
+    # One stable check name for branch protection, whatever the browser and shard matrix becomes.
+    name: E2E result
+    needs: [smoke, e2e]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          SMOKE: ${{ needs.smoke.result }}
+          E2E: ${{ needs.e2e.result }}
+        run: |
+          echo "smoke: $SMOKE, e2e: $E2E"
+          [ "$SMOKE" = success ] && [ "$E2E" = success ]
+
+  pages:
+    name: Publish report
+    needs: e2e
+    # Publish failing reports too: that's when they're most needed.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.e2e.outputs.report-name }}
+          path: report
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: report
+      - id: deploy
+        uses: actions/deploy-pages@v5

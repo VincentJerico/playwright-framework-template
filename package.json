@@ -14,7 +14,10 @@
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "selftest": "node scripts/selftest.mjs",
+    "test:known-defects": "playwright test --grep @known-defect",
+    "setup": "node scripts/setup.mjs"
   },
   "keywords": [
     "playwright",
