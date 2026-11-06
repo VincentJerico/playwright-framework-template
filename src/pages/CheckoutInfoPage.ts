@@ -22,6 +22,10 @@ export class CheckoutInfoPage extends BasePage {
     this.error = page.getByTestId('error');
   }
 
+  async goto() {
+    await super.goto('/checkout-step-one.html');
+  }
+
   async expectLoaded() {
     await expect(this.page).toHaveURL(/checkout-step-one\.html/);
     await expect(this.title).toHaveText('Checkout: Your Information');

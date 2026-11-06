@@ -41,11 +41,12 @@ test.describe('problem_user (known defects)', { tag: '@known-defect' }, () => {
   test(
     'typing a last name overwrites the first name',
     { annotation: { type: 'issue', description: 'Last Name input writes into First Name' } },
-    async ({ app, cartPage, checkoutInfoPage }) => {
+    async ({ app, checkoutInfoPage }) => {
+      // Open the form directly: this test is about the Last Name field. For problem_user the cart's
+      // Checkout button sometimes ignores the click (seen twice in CI, in Firefox and WebKit; never
+      // for standard_user), which would make this test fail for an unrelated reason.
       await app.seedCart(PRODUCTS.backpack);
-      await cartPage.goto();
-      await cartPage.expectLoaded();
-      await cartPage.checkout();
+      await checkoutInfoPage.goto();
       await checkoutInfoPage.expectLoaded();
 
       const customer = makeCustomer();
