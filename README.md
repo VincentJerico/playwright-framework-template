@@ -41,6 +41,27 @@ checks: 107 tests in total. Three of them pin known defects in the demo's `probl
 How the layers fit together, and why each decision was made: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 How to write a test here: [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Start your own project from it
+
+1. Click **Use this template** on GitHub (or clone the repo).
+2. Point it at your app:
+
+   ```bash
+   npm install
+   npm run setup -- --name acme-e2e --dev https://dev.acme.test --staging https://staging.acme.test --prod https://acme.test
+   ```
+
+   This renames the package, writes your URLs into `src/config/env.ts` (staging and prod default to
+   the dev URL), and creates `.env`. It's safe to run again.
+
+3. Set `SAUCE_USERNAME` and `SAUCE_PASSWORD` in `.env` and as repository secrets. The run stops
+   until they're set, because your app isn't the demo.
+4. Replace the demo page objects and specs with your app's. Keep `src/support/`, the fixtures
+   pattern and `selftest/`. The CI pipeline works as is.
+
+CI checks this path on every push: the `Template setup` job sets up a fresh copy and makes sure it
+still builds.
+
 ## What a test looks like
 
 ```ts
@@ -129,7 +150,8 @@ last-name test opens the checkout form directly instead.
 up even when this repo hasn't changed:
 
 1. **Lint, format and typecheck.** Everything else waits for these.
-2. **Self-test.** Each guard must catch its planted defect.
+2. **Self-test.** Each guard must catch its planted defect. **Template setup** checks that a fresh
+   copy can be set up and still builds.
 3. **API.** HTTP checks without a browser.
 4. **Smoke.** The `@smoke` tests on Chromium, so a broken build fails in about a minute.
 5. **E2E.** The full suite on Chromium, Firefox, WebKit and mobile Chrome, each split across 2

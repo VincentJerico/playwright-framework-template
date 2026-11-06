@@ -15,11 +15,14 @@ interface EnvConfig {
   baseURL: string;
 }
 
+// `npm run setup` rewrites the block between these markers. Keep them if you edit it by hand.
+// setup:environments:start
 const ENVIRONMENTS: Record<EnvName, EnvConfig> = {
   dev: { baseURL: 'https://www.saucedemo.com' },
   staging: { baseURL: 'https://www.saucedemo.com' },
   prod: { baseURL: 'https://www.saucedemo.com' },
 };
+// setup:environments:end
 
 function resolveEnv(name: string): EnvName {
   if (Object.hasOwn(ENVIRONMENTS, name)) return name as EnvName;

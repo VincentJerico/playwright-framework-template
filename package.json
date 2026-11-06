@@ -16,7 +16,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "selftest": "node scripts/selftest.mjs",
-    "test:known-defects": "playwright test --grep @known-defect"
+    "test:known-defects": "playwright test --grep @known-defect",
+    "setup": "node scripts/setup.mjs"
   },
   "keywords": [
     "playwright",
