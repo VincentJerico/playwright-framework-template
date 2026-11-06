@@ -51,6 +51,21 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  selftest:
+    # A gate that can't fail isn't a gate: every guard must catch its planted defect.
+    name: Self-test (planted failures)
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run selftest
+
   api:
     name: API
     needs: lint
