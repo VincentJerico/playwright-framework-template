@@ -27,6 +27,8 @@ export default defineConfig({
 
   use: {
     baseURL: config.baseURL,
+    // The demo marks elements with data-test; getByTestId() reads it.
+    testIdAttribute: 'data-test',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
