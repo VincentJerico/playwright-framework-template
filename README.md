@@ -122,11 +122,46 @@ last-name test opens the checkout form directly instead.
 4. Add data builders to `src/data/factory.ts` as needed.
 5. A new matcher or guard gets a planted failure in `selftest/`.
 
-## CI
+## CI and automation
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint, format and typecheck first. Then
-the E2E suite runs on Chromium, Firefox, WebKit and mobile Chrome in a matrix, uploading an HTML
-report per browser, the `api` project runs in its own job without a browser, and the self-test job
-runs the planted failures.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request, on
+`main`, and every night at 03:00 Philippine time (19:00 UTC), so a change on the site under test shows
+up even when this repo hasn't changed:
+
+1. **Lint, format and typecheck.** Everything else waits for these.
+2. **Self-test.** Each guard must catch its planted defect.
+3. **API.** HTTP checks without a browser.
+4. **Smoke.** The `@smoke` tests on Chromium, so a broken build fails in about a minute.
+5. **E2E.** The full suite on Chromium, Firefox, WebKit and mobile Chrome, each split across 2
+   shards. Every shard's results are merged into **one HTML report** (artifact `playwright-report`),
+   and a results table per browser is written to the run's summary page.
+6. **E2E result.** A single pass/fail check for branch protection, whatever the browser and shard
+   matrix becomes.
+7. **Publish report** (`main` and nightly only). The merged report goes to GitHub Pages:
+   https://vincentjerico.github.io/playwright-framework-template/
+
 CI retries a failed test twice so the report captures a trace, but `failOnFlakyTests` still fails the
-run when a retry passes, so flakiness gets fixed instead of hidden.
+run when a retry passes, so flakiness gets fixed instead of hidden. A new push to a pull request
+cancels its older run. Run it by hand from the Actions tab, optionally with a `grep` such as `@smoke`.
+
+### Use the pipeline from another repo
+
+The E2E stage is a reusable workflow,
+[`.github/workflows/playwright.yml`](.github/workflows/playwright.yml). Any repo with a Playwright
+config can call it:
+
+```yaml
+jobs:
+  e2e:
+    uses: VincentJerico/playwright-framework-template/.github/workflows/playwright.yml@main
+    with:
+      projects: '["chromium"]' # JSON array of your Playwright project names
+      shards: 2
+      grep: '' # e.g. '@smoke'
+      working-directory: . # where package.json and playwright.config.ts live
+    secrets: inherit
+```
+
+It installs dependencies and browsers, runs each project across the shards, merges the results into
+one `playwright-report` artifact, and writes the summary. If your config has a `webServer`, Playwright
+starts your app in each job.

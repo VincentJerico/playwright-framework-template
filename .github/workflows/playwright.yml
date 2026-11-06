@@ -1,0 +1,156 @@
+# Reusable Playwright pipeline. This repo's CI calls it, and so can any other repo:
+#
+#   jobs:
+#     e2e:
+#       uses: VincentJerico/playwright-framework-template/.github/workflows/playwright.yml@main
+#       with:
+#         projects: '["chromium"]'
+#         shards: 2
+#       secrets: inherit
+#
+# It runs each project across N shards, merges every shard's blob report into one HTML report
+# (artifact `playwright-report`) and writes a results table to the run's summary page.
+name: Playwright (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      projects:
+        description: JSON array of Playwright project names to run.
+        type: string
+        default: '["chromium", "firefox", "webkit", "mobile-chrome"]'
+      shards:
+        description: Shards per project.
+        type: number
+        default: 2
+      grep:
+        description: Only run tests matching this pattern (e.g. "@smoke"). Empty runs everything.
+        type: string
+        default: ''
+      test-env:
+        description: TEST_ENV for the run (dev | staging | prod).
+        type: string
+        default: dev
+      base-url:
+        description: Overrides the environment's base URL. Empty keeps the configured one.
+        type: string
+        default: ''
+      working-directory:
+        description: Directory with package.json and playwright.config.ts.
+        type: string
+        default: .
+      node-version:
+        type: string
+        default: '22'
+      report-name:
+        description: Name of the merged HTML report artifact.
+        type: string
+        default: playwright-report
+    secrets:
+      SAUCE_USERNAME:
+        required: false
+      SAUCE_PASSWORD:
+        required: false
+    outputs:
+      report-name:
+        description: Name of the merged HTML report artifact.
+        value: ${{ inputs.report-name }}
+
+jobs:
+  plan:
+    name: Plan shards
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - id: plan
+        env:
+          SHARDS: ${{ inputs.shards }}
+        run: |
+          if ! [[ "$SHARDS" =~ ^[1-9][0-9]?$ ]]; then echo "shards must be 1-99, got '$SHARDS'"; exit 1; fi
+          echo "shards=$(seq -s, 1 "$SHARDS" | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: ${{ matrix.project }} (${{ matrix.shard }}/${{ inputs.shards }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(inputs.projects) }}
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    env:
+      TEST_ENV: ${{ inputs.test-env }}
+      BASE_URL: ${{ inputs.base-url }}
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - run: npm ci
+      - name: Install browsers
+        run: npx playwright install --with-deps
+      - name: Run ${{ matrix.project }}, shard ${{ matrix.shard }}
+        env:
+          PROJECT: ${{ matrix.project }}
+          SHARD: ${{ matrix.shard }}/${{ inputs.shards }}
+          GREP: ${{ inputs.grep }}
+        # Dependencies (the auth `setup` project) run automatically. The blob reporter keeps raw
+        # results so the merge job can build one report from every shard.
+        run: npx playwright test --project="$PROJECT" --shard="$SHARD" ${GREP:+--grep="$GREP"} --reporter=blob
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: blob-${{ inputs.report-name }}-${{ matrix.project }}-${{ matrix.shard }}
+          path: ${{ inputs.working-directory }}/blob-report/
+          retention-days: 3
+
+  report:
+    name: Merge report
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: blob-${{ inputs.report-name }}-*
+          merge-multiple: true
+          path: ${{ inputs.working-directory }}/all-blob-reports
+      - name: Merge shards into one HTML report
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: results.json
+        run: npx playwright merge-reports --reporter=html,json ./all-blob-reports
+      - name: Results summary
+        env:
+          RUN_LABEL: ${{ inputs.grep && format('grep {0}', inputs.grep) || 'full suite' }}
+          REPORT_NAME: ${{ inputs.report-name }}
+        # Repos that call this workflow may not have the summary script; fall back to a pointer.
+        run: |
+          if [ -f scripts/report-summary.mjs ]; then
+            node scripts/report-summary.mjs results.json "$RUN_LABEL" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Merged report: download the \`$REPORT_NAME\` artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.report-name }}
+          path: ${{ inputs.working-directory }}/playwright-report/
+          retention-days: 14
