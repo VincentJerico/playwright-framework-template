@@ -41,11 +41,18 @@ type Fixtures = Pages & {
 export class AppState {
   constructor(private readonly page: Page) {}
 
-  /** Puts these products in the cart. Takes effect on the next page load. */
+  /**
+   * Puts these products in the cart on the test's next page load, without navigating now. An init
+   * script writes the cart once per tab (a sessionStorage flag stops a reload from re-seeding it).
+   * An extra navigation here used to overlap with the test's own and broke checkout in Firefox.
+   */
   async seedCart(...products: Product[]) {
-    await this.page.goto('/', { waitUntil: 'domcontentloaded' });
-    await this.page.evaluate(
-      (ids) => localStorage.setItem('cart-contents', JSON.stringify(ids)),
+    await this.page.addInitScript(
+      (ids) => {
+        if (sessionStorage.getItem('seeded-cart')) return;
+        localStorage.setItem('cart-contents', JSON.stringify(ids));
+        sessionStorage.setItem('seeded-cart', '1');
+      },
       products.map((p) => p.id),
     );
   }

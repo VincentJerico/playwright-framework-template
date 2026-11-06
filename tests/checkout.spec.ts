@@ -57,7 +57,9 @@ test.describe('Checkout', { annotation: { type: 'feature', description: 'Checkou
     test(`asks for ${field} when it is missing`, async ({ app, cartPage, checkoutInfoPage }) => {
       await app.seedCart(PRODUCTS.onesie);
       await cartPage.goto();
+      await cartPage.expectLoaded();
       await cartPage.checkout();
+      await checkoutInfoPage.expectLoaded();
 
       await checkoutInfoPage.enterCustomer({ ...makeCustomer(), [field]: undefined });
       await checkoutInfoPage.continue();
@@ -75,7 +77,9 @@ test.describe('Checkout', { annotation: { type: 'feature', description: 'Checkou
   }) => {
     await app.seedCart(PRODUCTS.backpack);
     await cartPage.goto();
+    await cartPage.expectLoaded();
     await cartPage.checkout();
+    await checkoutInfoPage.expectLoaded();
     await checkoutInfoPage.enterCustomer(makeCustomer());
     await checkoutInfoPage.continue();
 

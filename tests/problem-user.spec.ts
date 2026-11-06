@@ -44,7 +44,9 @@ test.describe('problem_user (known defects)', { tag: '@known-defect' }, () => {
     async ({ app, cartPage, checkoutInfoPage }) => {
       await app.seedCart(PRODUCTS.backpack);
       await cartPage.goto();
+      await cartPage.expectLoaded();
       await cartPage.checkout();
+      await checkoutInfoPage.expectLoaded();
 
       const customer = makeCustomer();
       await checkoutInfoPage.enterCustomer({

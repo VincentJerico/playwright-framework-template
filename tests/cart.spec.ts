@@ -16,6 +16,7 @@ test.describe('Cart', { annotation: { type: 'feature', description: 'Cart' } }, 
   test('removing an item takes it out of the cart', async ({ app, cartPage }) => {
     await app.seedCart(PRODUCTS.backpack, PRODUCTS.bikeLight);
     await cartPage.goto();
+    await cartPage.expectLoaded();
     await expect(cartPage.items).toHaveCount(2);
 
     await cartPage.remove(PRODUCTS.backpack);
@@ -26,6 +27,7 @@ test.describe('Cart', { annotation: { type: 'feature', description: 'Cart' } }, 
   test('the cart survives a reload', async ({ app, cartPage, page }) => {
     await app.seedCart(PRODUCTS.fleeceJacket);
     await cartPage.goto();
+    await cartPage.expectLoaded();
     // Wait for the cart to show the item first: it proves the item was there before the reload,
     // and reloading mid-navigation aborts the first load (Firefox reports NS_BINDING_ABORTED).
     await expect(cartPage.names).toHaveText([PRODUCTS.fleeceJacket.name]);
@@ -36,6 +38,7 @@ test.describe('Cart', { annotation: { type: 'feature', description: 'Cart' } }, 
 
   test('continue shopping returns to the products page', async ({ cartPage, inventoryPage }) => {
     await cartPage.goto();
+    await cartPage.expectLoaded();
     await cartPage.continueShoppingButton.click();
     await inventoryPage.expectLoaded();
   });
